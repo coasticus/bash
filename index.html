@@ -1,0 +1,1643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>bash-5.2$ — Tactical Terminal & Arena</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,700;1,400&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-void: #050508;
+      --bg-terminal: #09090e;
+      --bg-card: #0e0e14;
+      --bg-card-hover: #14141c;
+      --border-dim: #1f1f2a;
+      --border-mid: #2a2a38;
+      --crimson: #ff2442;
+      --crimson-bright: #ff1a35;
+      --crimson-glow: rgba(255, 36, 66, 0.45);
+      --pure-white: #ffffff;
+      --text-dim: #71717a;
+      --text-mid: #a1a1aa;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-void);
+      color: #e4e4e7;
+      font-family: 'JetBrains Mono', monospace;
+      overflow-x: hidden;
+      min-height: 100vh;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 36, 66, 0.08) 0%, transparent 65%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 100% 100%, 28px 28px, 28px 28px;
+    }
+
+    /* Monochrome tactical scanline effect */
+    .terminal-scanlines {
+      background: linear-gradient(
+        rgba(0, 0, 0, 0) 50%, 
+        rgba(0, 0, 0, 0.5) 50%
+      );
+      background-size: 100% 3px;
+      pointer-events: none;
+    }
+
+    .red-glow {
+      box-shadow: 0 0 20px var(--crimson-glow);
+    }
+
+    .red-border-glow {
+      box-shadow: 0 0 14px rgba(255, 36, 66, 0.25);
+    }
+
+    /* Custom Terminal Monospaced Scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #07070a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #23232f;
+      border-radius: 1px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--crimson);
+    }
+
+    .reticle-spin {
+      animation: reticleSpin 26s linear infinite;
+    }
+
+    @keyframes reticleSpin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes scopePulse {
+      0%, 100% { opacity: 0.95; transform: scale(1); }
+      50% { opacity: 0.45; transform: scale(0.97); }
+    }
+
+    .scope-pulse {
+      animation: scopePulse 2.8s ease-in-out infinite;
+    }
+  </style>
+</head>
+<body class="p-2 sm:p-4 md:p-6 flex flex-col items-center justify-start min-h-screen relative text-zinc-200 selection:bg-[#ff2442] selection:text-white">
+
+  <!-- Tactical Scanline Grid (Toggleable) -->
+  <div id="scanline-layer" class="terminal-scanlines fixed inset-0 z-40 transition-opacity duration-300"></div>
+
+  <div class="w-full max-w-6xl flex flex-col gap-3.5 relative z-30">
+
+    <!-- Top Server Header -->
+    <header class="bg-[#09090e] border border-[#1f1f2a] rounded-xl p-4 sm:p-5 relative overflow-hidden backdrop-blur-md">
+      <!-- Crimson subtle ambient glow -->
+      <div class="absolute -right-24 -top-24 w-80 h-80 bg-[#ff2442]/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+        
+        <!-- Server Identity & Custom Sniper Reticle Icon -->
+        <div class="flex items-center space-x-4">
+          <!-- Custom SVG Reticle Sniper Icon -->
+          <div class="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 bg-black rounded-xl border border-red-500/50 p-1 overflow-hidden shadow-[0_0_24px_rgba(255,36,66,0.3)] flex items-center justify-center group">
+            
+            <!-- Fractured Silhouette Mask -->
+            <svg class="absolute inset-0 w-full h-full opacity-70 group-hover:scale-105 transition-transform duration-500" viewBox="0 0 100 100" fill="none">
+              <path d="M50 15 C33 15 24 28 24 45 C24 58 30 70 42 78 L42 85 L58 85 L58 78 C70 70 76 58 76 45 C76 28 67 15 50 15 Z" fill="#ffffff" fill-opacity="0.9"/>
+              <path d="M38 46 C34 46 32 40 36 37 C40 35 43 41 38 46 Z" fill="#050508"/>
+              <path d="M62 46 C66 46 68 40 64 37 C60 35 57 41 62 46 Z" fill="#050508"/>
+              <polygon points="18,30 28,34 22,42" fill="#ffffff" opacity="0.6"/>
+              <polygon points="78,32 86,40 76,46" fill="#ffffff" opacity="0.6"/>
+              <polygon points="32,78 40,88 28,84" fill="#ffffff" opacity="0.5"/>
+            </svg>
+
+            <!-- Precision Reticle Targeting Scope -->
+            <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="43" stroke="#ff2442" stroke-width="1.2" stroke-dasharray="3 5" class="reticle-spin origin-center opacity-80"/>
+              <circle cx="50" cy="50" r="32" stroke="#ff2442" stroke-width="1.8" class="scope-pulse origin-center"/>
+              <!-- Crosshairs -->
+              <line x1="50" y1="8" x2="50" y2="40" stroke="#ff2442" stroke-width="1.6"/>
+              <line x1="50" y1="60" x2="50" y2="92" stroke="#ff2442" stroke-width="1.6"/>
+              <line x1="8" y1="50" x2="40" y2="50" stroke="#ff2442" stroke-width="1.6"/>
+              <line x1="60" y1="50" x2="92" y2="50" stroke="#ff2442" stroke-width="1.6"/>
+              <!-- High-intensity Laser Sight -->
+              <circle cx="50" cy="50" r="2.2" fill="#ffffff"/>
+              <circle cx="50" cy="50" r="1.1" fill="#ff2442"/>
+            </svg>
+          </div>
+
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h1 class="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 font-mono">
+                <span>bash-5.2$</span>
+              </h1>
+              <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-red-950/80 border border-red-500/70 text-red-200 font-mono tracking-wider">
+                [SYS-V4]
+              </span>
+              <span class="px-2 py-0.5 text-[10px] rounded bg-black border border-zinc-800 text-zinc-400 font-mono">
+                Est. Sep 2026
+              </span>
+            </div>
+
+            <!-- Founder & Network Line with monochrome bracket tags -->
+            <div class="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-zinc-400 font-mono">
+              <span class="text-zinc-500">FOUNDER:</span>
+              <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-black border border-zinc-800 text-white font-semibold">
+                <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+                <span class="text-white">coasticus</span>
+                <span class="px-1 py-0.2 rounded bg-red-950 text-white text-[10px] border border-red-600 font-mono">[LINE]</span>
+                <span class="text-red-400 text-xs">◆</span>
+              </div>
+              <span class="text-zinc-700">::</span>
+              <span class="text-zinc-400">BRANCHES: <span class="text-red-400 font-bold">#redliner</span> &bull; <span class="text-white font-bold">#jjs</span></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <!-- Dynamic Fluctuating Presence Counter (No Green) -->
+          <div class="bg-black border border-[#1f1f2a] rounded-lg px-3.5 py-2 flex items-center gap-3 text-xs font-mono">
+            <div class="flex items-center gap-1.5">
+              <span class="flex h-2 w-2 relative">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-70"></span>
+                <span class="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              <span class="text-white font-bold" id="live-online-metric">6</span>
+              <span class="text-zinc-400">Online</span>
+            </div>
+            <div class="h-3 w-px bg-zinc-800"></div>
+            <div>
+              <span class="text-white font-bold" id="live-total-metric">10</span>
+              <span class="text-zinc-400">Operatives</span>
+            </div>
+            <div class="h-3 w-px bg-zinc-800"></div>
+            <div class="flex items-center gap-1">
+              <span class="text-red-500 font-bold" id="sync-status-indicator">[STATIC]</span>
+            </div>
+          </div>
+
+          <!-- Live Discord Sync Trigger -->
+          <button onclick="openSyncModal()" class="px-2.5 py-2 rounded-lg bg-[#0e0e14] hover:bg-[#151520] border border-[#1f1f2a] hover:border-red-500/50 text-zinc-300 hover:text-white transition text-xs flex items-center gap-1.5 cursor-pointer font-mono" title="Connect Discord Widget API">
+            <span class="text-red-400">⬢</span>
+            <span class="text-[11px]">DISCORD SYNC</span>
+          </button>
+
+          <!-- Audio & CRT Toggles -->
+          <button id="audio-toggle-btn" class="px-2.5 py-2 rounded-lg bg-[#0e0e14] hover:bg-[#151520] border border-[#1f1f2a] text-zinc-300 hover:text-white transition text-xs flex items-center gap-1.5 cursor-pointer font-mono">
+            <span id="audio-icon">[SFX]</span>
+            <span class="hidden md:inline text-[11px]" id="audio-text">ON</span>
+          </button>
+
+          <button id="crt-toggle-btn" class="px-2.5 py-2 rounded-lg bg-[#0e0e14] hover:bg-[#151520] border border-[#1f1f2a] text-zinc-300 hover:text-white transition text-xs flex items-center gap-1.5 cursor-pointer font-mono">
+            <span class="text-red-400">::</span>
+            <span class="hidden md:inline text-[11px]">CRT</span>
+          </button>
+
+          <!-- Discord Action Button -->
+          <button onclick="openJoinModal()" class="px-4 py-2 rounded-lg bg-[#ff2442] hover:bg-[#ff1a35] text-white font-semibold transition text-xs flex items-center gap-2 red-glow cursor-pointer font-mono">
+            <span>[JOIN]</span>
+            <span class="tracking-wide">INVITE</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="flex items-center gap-1.5 p-1.5 bg-[#09090e] border border-[#1f1f2a] rounded-xl overflow-x-auto scrollbar-none text-xs font-mono">
+      <button onclick="switchTab('terminal')" id="tab-btn-terminal" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 bg-[#ff2442] text-white">
+        <span>>_</span>
+        <span>SHELL</span>
+      </button>
+      <button onclick="switchTab('channels')" id="tab-btn-channels" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+        <span>//</span>
+        <span>CHANNELS</span>
+      </button>
+      <button onclick="switchTab('branches')" id="tab-btn-branches" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+        <span>[BRANCH]</span>
+        <span>REDLINER / JJS</span>
+      </button>
+      <button onclick="switchTab('leaderboard')" id="tab-btn-leaderboard" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+        <span>▲</span>
+        <span>RANKINGS</span>
+      </button>
+      <button onclick="switchTab('roster')" id="tab-btn-roster" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+        <span>◆</span>
+        <span>OPERATIVES</span>
+      </button>
+      <button onclick="switchTab('arena')" id="tab-btn-arena" class="tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900">
+        <span>◎</span>
+        <span>SPAR ARENA</span>
+      </button>
+    </nav>
+
+    <main class="w-full">
+      
+      <!-- TAB 1: TERMINAL CLI -->
+      <section id="panel-terminal" class="panel bg-[#09090e] border border-[#1f1f2a] rounded-xl shadow-2xl flex flex-col h-[650px] overflow-hidden">
+        
+        <!-- Terminal Window Titlebar -->
+        <div class="bg-[#0d0d13] px-4 py-2.5 border-b border-[#1f1f2a] flex items-center justify-between select-none font-mono">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-[#ff2442] inline-block shadow-[0_0_6px_rgba(255,36,66,0.6)]"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-700 inline-block"></span>
+            <span class="w-2.5 h-2.5 rounded-full bg-zinc-800 inline-block"></span>
+            <span class="text-xs text-zinc-400 ml-2">coasticus@bash-5.2: ~ (pty/0)</span>
+          </div>
+
+          <!-- Shell Command Quick Chips -->
+          <div class="hidden sm:flex items-center gap-1.5 text-[11px]">
+            <span class="text-zinc-600 text-[10px] mr-1">RUN:</span>
+            <button onclick="execQuick('help')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-zinc-300 border border-zinc-800 transition">help</button>
+            <button onclick="execQuick('tree')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-red-400 border border-zinc-800 transition">tree</button>
+            <button onclick="execQuick('members')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-white border border-zinc-800 transition">members</button>
+            <button onclick="execQuick('sync')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-red-400 border border-zinc-800 transition">sync</button>
+            <button onclick="execQuick('spar')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-white border border-zinc-800 transition">spar</button>
+            <button onclick="execQuick('clear')" class="px-2 py-0.5 rounded bg-black hover:bg-zinc-900 text-zinc-400 border border-zinc-800 transition">clear</button>
+          </div>
+        </div>
+
+        <!-- Terminal Output Viewport -->
+        <div id="terminal-body" class="flex-1 p-4 md:p-6 overflow-y-auto font-mono text-sm leading-relaxed space-y-4 cursor-text">
+          
+          <!-- Monospaced Header Banner -->
+          <div class="space-y-3 pb-3 border-b border-zinc-800/80">
+            <pre class="text-[10px] sm:text-xs text-[#ff2442] font-bold leading-tight select-none overflow-x-auto whitespace-pre">
+██████╗  █████╗ ███████╗██╗  ██╗       ███████╗    ██████╗ ██╗
+██╔══██╗██╔══██╗██╔════╝██║  ██║       ██╔════╝    ╚════██╗██║
+██████╔╝███████║███████╗███████║█████╗ ███████╗     █████╔╝██║
+██╔══██╗██╔══██║╚════██║██╔══██║╚════╝ ╚════██║    ██╔═══╝ ╚═╝
+██████╔╝██║  ██║███████║██║  ██║       ███████║    ███████╗██╗
+╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝       ╚══════╝    ╚══════╝╚═╝
+            </pre>
+            <div class="text-xs text-zinc-300 space-y-1">
+              <p class="font-bold text-white tracking-wide">bash-5.2$ [TACTICAL BATTLE INTERFACE &bull; REDLINER & JJS]</p>
+              <p class="text-zinc-400">Node: <span class="text-red-400">bash-52.network</span> &bull; State: <span class="text-white font-semibold" id="terminal-state-text">INITIALIZED</span> &bull; Session: <span class="text-zinc-200" id="terminal-session-id">#0092</span></p>
+              <div class="bg-black p-2.5 rounded border border-red-500/20 text-zinc-300 mt-2 flex flex-wrap items-center justify-between gap-2">
+                <span>Enter <span class="text-red-400 font-bold">help</span> for system commands or <span class="text-white font-bold">sync</span> to link Discord Widget.</span>
+                <span class="text-zinc-500 text-[11px]">Tab: <span class="text-white">Autocomplete</span> &bull; History: <span class="text-white">▲ / ▼</span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Output Stream -->
+          <div id="cli-output" class="space-y-4"></div>
+
+          <!-- Input Command Line -->
+          <div class="flex items-center space-x-2 text-sm pt-2" id="prompt-wrapper">
+            <span class="text-red-500 font-bold whitespace-nowrap" id="cli-prompt-label">coasticus@bash-5.2:~$</span>
+            <div class="relative flex-1">
+              <input 
+                type="text" 
+                id="cli-input-box" 
+                class="w-full bg-transparent text-white outline-none border-none font-mono text-sm caret-red-500 focus:ring-0 p-0 m-0" 
+                autofocus 
+                autocomplete="off" 
+                autocorrect="off" 
+                autocapitalize="off" 
+                spellcheck="false" 
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Terminal Status Footer -->
+        <div class="bg-[#0d0d13] px-4 py-2 border-t border-[#1f1f2a] flex items-center justify-between text-[11px] text-zinc-500 font-mono select-none">
+          <div class="flex items-center gap-2">
+            <span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>
+            <span class="text-zinc-400">BASH 5.2.21-RELEASE</span>
+            <span class="text-zinc-700">|</span>
+            <span class="text-zinc-400">RED/BLACK CORE</span>
+          </div>
+          <div>
+            <span>Discord API Widget: <strong class="text-zinc-300" id="footer-sync-state">READY</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: CHANNELS EXPLORER -->
+      <section id="panel-channels" class="panel hidden space-y-4">
+        <div class="bg-[#09090e] border border-[#1f1f2a] rounded-xl p-5 font-mono">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-[#1f1f2a] pb-4 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="text-red-500">//</span>
+                <span>DISCORD CHANNEL INFRASTRUCTURE</span>
+              </h2>
+              <p class="text-xs text-zinc-400 mt-1">Direct representation of the 6 server categories and 24 operational channels.</p>
+            </div>
+            <div class="text-xs text-zinc-400 bg-black px-3 py-1.5 rounded border border-zinc-800">
+              Total Nodes: <span class="text-white font-bold">24 Active</span>
+            </div>
+          </div>
+
+          <!-- Channel Categories Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="channel-categories-grid">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: COMBAT BRANCHES -->
+      <section id="panel-branches" class="panel hidden space-y-4 font-mono">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          
+          <!-- Branch: Redliner -->
+          <div class="bg-[#09090e] border-2 border-red-500/60 rounded-xl p-6 relative overflow-hidden group hover:border-red-500 transition-all duration-300 red-border-glow">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg bg-red-950/80 border border-red-600 flex items-center justify-center font-bold text-red-400 text-sm">
+                  [RL]
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">BRANCH: REDLINER</h3>
+                  <span class="text-xs text-red-400 font-mono">Channel: #redliner</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-bold rounded bg-red-950 border border-red-700 text-white">
+                SPEED / MOMENTUM
+              </span>
+            </div>
+
+            <p class="text-xs text-zinc-300 leading-relaxed mb-4">
+              High-velocity combat division specializing in sprint-lane duels, drift maneuvers, dynamic evasion, and high-stakes racing wagers.
+            </p>
+
+            <div class="space-y-2 bg-black p-3.5 rounded-lg border border-red-950/80 text-xs mb-5">
+              <div class="flex justify-between text-zinc-400">
+                <span>Sanctioned Scrims:</span>
+                <span class="text-white font-semibold">Saturdays 19:00 UTC</span>
+              </div>
+              <div class="flex justify-between text-zinc-400">
+                <span>Entry Requirement:</span>
+                <span class="text-red-400 font-semibold">1750+ ELO / Spar Trial</span>
+              </div>
+              <div class="flex justify-between text-zinc-400">
+                <span>Branch Commander:</span>
+                <span class="text-white font-semibold">coasticus [LINE]</span>
+              </div>
+            </div>
+
+            <button onclick="initiateBranchApply('Redliner')" class="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2">
+              <span>[APPLY FOR REDLINER TRIAL]</span>
+            </button>
+          </div>
+
+          <!-- Branch: JJS (Jujutsu Shenanigans) -->
+          <div class="bg-[#09090e] border-2 border-zinc-700 hover:border-white rounded-xl p-6 relative overflow-hidden group transition-all duration-300">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-lg bg-black border border-zinc-700 flex items-center justify-center font-bold text-white text-sm">
+                  [JJS]
+                </div>
+                <div>
+                  <h3 class="text-lg font-bold text-white">BRANCH: JJS</h3>
+                  <span class="text-xs text-zinc-400">Channel: #jjs (Jujutsu Shenanigans)</span>
+                </div>
+              </div>
+              <span class="px-2.5 py-1 text-[10px] font-bold rounded bg-zinc-900 border border-zinc-700 text-white">
+                ARENA FIGHTING
+              </span>
+            </div>
+
+            <p class="text-xs text-zinc-300 leading-relaxed mb-4">
+              Precision brawl division centered on frame-perfect cancels, Black Flash timing, domain defense, and 1v1 ladder rankings.
+            </p>
+
+            <div class="space-y-2 bg-black p-3.5 rounded-lg border border-zinc-800 text-xs mb-5">
+              <div class="flex justify-between text-zinc-400">
+                <span>Sanctioned Scrims:</span>
+                <span class="text-white font-semibold">Sundays 20:00 UTC</span>
+              </div>
+              <div class="flex justify-between text-zinc-400">
+                <span>Entry Requirement:</span>
+                <span class="text-white font-semibold">1800+ ELO / BO3 Duel</span>
+              </div>
+              <div class="flex justify-between text-zinc-400">
+                <span>Primary Channel:</span>
+                <span class="text-zinc-300 font-semibold">#nexus-battle-arena</span>
+              </div>
+            </div>
+
+            <button onclick="initiateBranchApply('JJS (Jujutsu Shenanigans)')" class="w-full py-2.5 rounded-lg bg-zinc-900 hover:bg-white hover:text-black border border-zinc-700 text-white font-bold text-xs uppercase tracking-wider transition shadow-lg flex items-center justify-center gap-2">
+              <span>[APPLY FOR JJS ROSTER]</span>
+            </button>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TAB 4: LEADERBOARD -->
+      <section id="panel-leaderboard" class="panel hidden space-y-4 font-mono">
+        <div class="bg-[#09090e] border border-[#1f1f2a] rounded-xl p-5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1f1f2a] pb-4 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="text-red-500">▲</span>
+                <span>COMPETITIVE COMBAT RANKINGS</span>
+              </h2>
+              <p class="text-xs text-zinc-400 mt-1">Aggregated rating across #top-10, #top-20, and #challenge-results feeds.</p>
+            </div>
+            
+            <div class="flex items-center gap-2 text-xs">
+              <button onclick="filterLb('all')" id="lb-filter-all" class="px-3 py-1 rounded bg-[#ff2442] text-white font-bold">[ALL]</button>
+              <button onclick="filterLb('redliner')" id="lb-filter-redliner" class="px-3 py-1 rounded bg-black text-zinc-400 hover:text-white border border-zinc-800">[REDLINER]</button>
+              <button onclick="filterLb('jjs')" id="lb-filter-jjs" class="px-3 py-1 rounded bg-black text-zinc-400 hover:text-white border border-zinc-800">[JJS]</button>
+            </div>
+          </div>
+
+          <!-- Table Wrapper -->
+          <div class="overflow-x-auto border border-[#1f1f2a] rounded-lg bg-black">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-[#0d0d13] border-b border-[#1f1f2a] text-zinc-400 uppercase text-[11px]">
+                  <th class="py-2.5 px-3">Rank</th>
+                  <th class="py-2.5 px-3">Operative</th>
+                  <th class="py-2.5 px-3">Branch</th>
+                  <th class="py-2.5 px-3">Rating (ELO)</th>
+                  <th class="py-2.5 px-3">Record (W / L)</th>
+                  <th class="py-2.5 px-3">Streak</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-table-body">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: OPERATIVES & DISCORD ROSTER -->
+      <section id="panel-roster" class="panel hidden space-y-4 font-mono">
+        <div class="bg-[#09090e] border border-[#1f1f2a] rounded-xl p-5">
+          <div class="border-b border-[#1f1f2a] pb-4 mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <span class="text-red-500">◆</span>
+                <span>DISCORD ROSTER & OPERATIVES</span>
+              </h2>
+              <p class="text-xs text-zinc-400 mt-1" id="roster-source-label">Direct capture from server member list [STATIC RECONSTRUCTION].</p>
+            </div>
+            <div class="text-xs bg-black text-zinc-300 border border-zinc-800 px-3 py-1 rounded">
+              <span id="roster-stat-online">6 Online</span> &bull; <span id="roster-stat-total">10 Members</span>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <!-- Tier 1: Founder -->
+            <div>
+              <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <span>FOUNDER — 1</span>
+                <span class="h-px bg-zinc-800 flex-1"></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div class="bg-[#0e0e14] border border-red-500/60 rounded-xl p-4 flex items-center space-x-3.5 relative overflow-hidden red-border-glow">
+                  <div class="relative w-11 h-11 rounded-full bg-black border border-red-500 flex items-center justify-center font-bold text-white text-sm shrink-0">
+                    <span>CO</span>
+                    <span class="absolute bottom-0 right-0 w-3 h-3 bg-red-500 border-2 border-black rounded-full" title="DND"></span>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-sm font-bold text-white truncate">coasticus</span>
+                      <span class="px-1.5 py-0.5 rounded bg-red-950 text-white text-[10px] font-bold border border-red-500">[LINE]</span>
+                      <span class="text-red-400 text-xs">◆</span>
+                    </div>
+                    <div class="text-[11px] text-zinc-400 mt-0.5">Founder & Lead Architect</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Tier 2: Online Members & Verified Apps -->
+            <div>
+              <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <span id="tier2-label">MEMBER — 5</span>
+                <span class="h-px bg-zinc-800 flex-1"></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="online-members-grid">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Tier 3: Offline Operatives -->
+            <div>
+              <div class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2 flex items-center gap-2">
+                <span id="tier3-label">OFFLINE — 4</span>
+                <span class="h-px bg-zinc-800 flex-1"></span>
+              </div>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" id="offline-members-grid">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 6: SPAR ARENA SIMULATOR -->
+      <section id="panel-arena" class="panel hidden space-y-4 font-mono">
+        <div class="bg-[#09090e] border border-[#1f1f2a] rounded-xl p-5">
+          <div class="border-b border-[#1f1f2a] pb-4 mb-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <span class="text-red-500">◎</span>
+              <span>TACTICAL SPAR MATCHMAKER SIMULATOR</span>
+            </h2>
+            <p class="text-xs text-zinc-400 mt-1">Simulate sanctioned duels governed by <code class="text-red-400">#spar-request</code> and <code class="text-white">#nexus-battle-arena</code> protocols.</p>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Setup Form -->
+            <div class="space-y-4 bg-[#0e0e14] p-4 rounded-xl border border-[#1f1f2a]">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider">Challenge Parameters</h3>
+              
+              <div>
+                <label class="block text-xs text-zinc-400 mb-1">Your Operative Handle:</label>
+                <input type="text" id="sim-player-name" value="You [GUEST]" class="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-white outline-none focus:border-red-500">
+              </div>
+
+              <div>
+                <label class="block text-xs text-zinc-400 mb-1">Target Opponent:</label>
+                <select id="sim-target-select" class="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-white outline-none focus:border-red-500">
+                  <option value="coasticus [LINE]">coasticus [LINE] (Boss Tier)</option>
+                  <option value="Sheikh hitlier [KURD]">Sheikh hitlier [KURD]</option>
+                  <option value="7SN [HIVE]">7SN [HIVE]</option>
+                  <option value="VOIDBØRN™ [ETOH]">VOIDBØRN™ [ETOH]</option>
+                  <option value="「 y u r i 」">「 y u r i 」</option>
+                  <option value="luke">luke</option>
+                  <option value="Dyno [BOT]">Dyno [BOT]</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs text-zinc-400 mb-1">Discipline / Branch:</label>
+                <select id="sim-discipline" class="w-full bg-black border border-zinc-800 rounded px-3 py-2 text-xs text-white outline-none focus:border-red-500">
+                  <option value="redliner">Branch: Redliner (Velocity Rush)</option>
+                  <option value="jjs">Branch: JJS (Domain Duel)</option>
+                </select>
+              </div>
+
+              <button onclick="executeArenaSimulation()" class="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition red-glow">
+                [INITIATE SANCTIONED SPAR]
+              </button>
+            </div>
+
+            <!-- Match Combat Feed -->
+            <div class="lg:col-span-2 bg-black p-4 rounded-xl border border-[#1f1f2a] flex flex-col h-[340px]">
+              <div class="flex items-center justify-between border-b border-zinc-800 pb-2 mb-3 text-xs">
+                <span class="text-zinc-400">Combat Feed Log</span>
+                <span class="text-red-400 font-bold" id="arena-status-indicator">[STANDBY]</span>
+              </div>
+
+              <div id="arena-log-feed" class="flex-1 overflow-y-auto space-y-2 text-xs text-zinc-300">
+                <div class="text-zinc-600 italic">Select parameters and click "[INITIATE SANCTIONED SPAR]" to compute combat roll calculations.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Modal: Discord Live Sync -->
+    <div id="sync-modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm font-mono">
+      <div class="bg-[#09090e] border border-red-500/50 w-full max-w-lg rounded-xl shadow-[0_0_35px_rgba(255,36,66,0.25)] overflow-hidden text-zinc-200">
+        
+        <div class="bg-[#0d0d13] px-5 py-3 border-b border-[#1f1f2a] flex justify-between items-center">
+          <div class="flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+            <span class="font-bold text-white text-sm">DISCORD WIDGET API INTEGRATION</span>
+          </div>
+          <button onclick="closeSyncModal()" class="text-zinc-400 hover:text-white text-lg cursor-pointer">&times;</button>
+        </div>
+
+        <div class="p-5 space-y-4 text-xs">
+          <p class="text-zinc-300 leading-relaxed">
+            Discord provides an official, live REST Widget endpoint for any server. When enabled, this website can query <strong class="text-white">who is currently online, bot presences, and server activity</strong> in real time without needing an API token.
+          </p>
+
+          <div class="bg-black p-3.5 rounded border border-zinc-800 space-y-2 text-[11px]">
+            <div class="text-red-400 font-bold">HOW TO ENABLE IN DISCORD (10 Seconds):</div>
+            <ol class="list-decimal list-inside space-y-1 text-zinc-400">
+              <li>Open your Discord Server Settings.</li>
+              <li>Go to <strong class="text-white">Widget</strong> (under the Apps/Integrations section).</li>
+              <li>Toggle <strong class="text-white">"Enable Server Widget"</strong> ON.</li>
+              <li>Copy your <strong class="text-white">Server ID</strong> and paste below.</li>
+            </ol>
+          </div>
+
+          <div>
+            <label class="block text-zinc-400 mb-1">Discord Server / Guild ID:</label>
+            <div class="flex gap-2">
+              <input type="text" id="discord-guild-id-input" placeholder="e.g. 12849204918239012" class="flex-1 bg-black border border-zinc-700 rounded px-3 py-2 text-white outline-none focus:border-red-500">
+              <button onclick="syncDiscordWidget()" id="sync-exec-btn" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded cursor-pointer transition">
+                CONNECT
+              </button>
+            </div>
+            <p id="sync-feedback" class="text-[11px] mt-1.5 text-zinc-500">Target endpoint: https://discord.com/api/guilds/{SERVER_ID}/widget.json</p>
+          </div>
+
+          <div class="pt-2 border-t border-zinc-800 flex justify-between items-center text-[11px]">
+            <button onclick="resetToStaticRoster()" class="text-zinc-400 hover:text-white underline cursor-pointer">Revert to Static Roster</button>
+            <button onclick="closeSyncModal()" class="px-3 py-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded cursor-pointer">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Direct Join Modal -->
+    <div id="join-modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm font-mono">
+      <div class="bg-[#09090e] border border-red-500/50 w-full max-w-md rounded-xl shadow-[0_0_35px_rgba(255,36,66,0.3)] overflow-hidden text-zinc-200">
+        <div class="bg-[#0d0d13] px-5 py-3 border-b border-[#1f1f2a] flex justify-between items-center">
+          <span class="font-bold text-white text-sm">bash-5.2$ &bull; Discord Invite</span>
+          <button onclick="closeJoinModal()" class="text-zinc-400 hover:text-white text-lg">&times;</button>
+        </div>
+        <div class="p-6 space-y-4 text-center">
+          <div class="w-12 h-12 mx-auto bg-black border border-red-500 rounded-full flex items-center justify-center text-red-400 text-lg font-bold">
+            [::]
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Join bash-5.2$ Discord</h3>
+            <p class="text-xs text-zinc-400 mt-1">Access verified channels, #spar-request, branch tournaments, and custom rank roles.</p>
+          </div>
+
+          <div class="bg-black border border-zinc-800 p-3 rounded-lg flex items-center justify-between text-xs text-zinc-300">
+            <span id="invite-link-text">https://discord.gg/bash-52</span>
+            <button onclick="copyDiscordLink()" class="px-2.5 py-1 bg-zinc-800 hover:bg-zinc-700 text-white rounded text-[11px] font-semibold transition">
+              Copy
+            </button>
+          </div>
+
+          <div class="pt-2">
+            <button onclick="window.open('https://discord.com', '_blank')" class="w-full py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-bold text-xs uppercase tracking-wider transition red-glow">
+              Launch Discord Client
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Application Modal -->
+    <div id="apply-modal" class="fixed inset-0 bg-black/85 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm font-mono">
+      <div class="bg-[#09090e] border border-zinc-700 w-full max-w-lg rounded-xl shadow-2xl overflow-hidden text-zinc-200">
+        <div class="bg-[#0d0d13] px-5 py-3 border-b border-zinc-800 flex justify-between items-center">
+          <span class="font-bold text-white text-sm" id="apply-modal-header">Branch Application</span>
+          <button onclick="closeApplyModal()" class="text-zinc-400 hover:text-white">&times;</button>
+        </div>
+        <form onsubmit="handleApplySubmit(event)" class="p-5 space-y-3.5 text-xs">
+          <div>
+            <label class="block text-zinc-400 mb-1">Discord Handle:</label>
+            <input type="text" id="apply-user" required placeholder="operative#0000" class="w-full bg-black border border-zinc-700 rounded px-3 py-2 text-white outline-none focus:border-red-500">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Target Branch:</label>
+            <input type="text" id="apply-branch-target" readonly class="w-full bg-zinc-900 border border-zinc-800 rounded px-3 py-2 text-red-400 font-bold">
+          </div>
+          <div>
+            <label class="block text-zinc-400 mb-1">Combat History / Peak ELO / Clips:</label>
+            <textarea id="apply-note" required rows="3" placeholder="Provide background, match replays, or spar record..." class="w-full bg-black border border-zinc-700 rounded px-3 py-2 text-white outline-none focus:border-red-500"></textarea>
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeApplyModal()" class="px-3 py-1.5 rounded bg-zinc-800 text-zinc-400 hover:text-white">Cancel</button>
+            <button type="submit" class="px-4 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold">Submit to #applications</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Notification Toast Shelf -->
+    <div id="toast-shelf" class="fixed bottom-5 right-5 z-50 space-y-2 pointer-events-none font-mono"></div>
+
+  </div>
+
+  <script>
+    // Server Channel Categories Hierarchy
+    const SERVER_CATEGORIES = [
+      {
+        name: "【✧ Community ✧】",
+        channels: [
+          { name: "welcome", type: "text", desc: "Arrival logs, verification portal, and server introduction." },
+          { name: "blacklist", type: "text", desc: "Public infraction register, disqualified duelists & banned operatives." },
+          { name: "unblacklist", type: "text", desc: "Pardon appeals, review schedules, and restoration forms." },
+          { name: "role-guide", type: "text", desc: "Division rank guidelines, branch roles, and vanity badges." },
+          { name: "overview", type: "text", desc: "Server master architecture, guidelines, and roadmap." }
+        ]
+      },
+      {
+        name: "【✧ Branches ✧】",
+        channels: [
+          { name: "redliner", type: "text", desc: "Official wing for the Redliner combat speed division." },
+          { name: "jjs", type: "text", desc: "Dedicated Jujutsu Shenanigans battle room and combo discussion." }
+        ]
+      },
+      {
+        name: "【◆ Important ◆】",
+        channels: [
+          { name: "announcements", type: "text", desc: "Primary notices, scrim rosters, and server events." },
+          { name: "sub-announcements", type: "text", desc: "Branch announcements and secondary scrimmage notices." },
+          { name: "rules", type: "text", desc: "Official server conduct and tournament rules." },
+          { name: "applications", type: "text", desc: "Branch tryouts, staff forms, and recruitment tickets." },
+          { name: "boosts", type: "text", desc: "Server nitro boost logs and custom perk unlocks." },
+          { name: "polls", type: "text", desc: "Community meta votes and division balancing polls." }
+        ]
+      },
+      {
+        name: "【◆ General ◆】",
+        channels: [
+          { name: "chat", type: "text", desc: "General discussion lounge for all enlisted operatives." },
+          { name: "media", type: "text", desc: "Recordings, battle screenshots, clips, and art." },
+          { name: "bot-commands", type: "text", desc: "Sandbox for bot executions (Arcane, Carl-bot, Dyno, NEXUS)." },
+          { name: "spar-request", type: "text", desc: "Direct matchmaking pings for 1v1 and team battles." },
+          { name: "nexus-battle-arena", type: "text", desc: "Official tournament grounds and arena feeds." }
+        ]
+      },
+      {
+        name: "【◆ Leaderboard ◆】",
+        channels: [
+          { name: "top-10", type: "text", desc: "Grandmaster rank elite (2200+ ELO rating)." },
+          { name: "top-20", type: "text", desc: "Challenger tier bracket (1950 - 2199 ELO rating)." },
+          { name: "top-30", type: "text", desc: "Vanguard bracket contenders (1700 - 1949 ELO rating)." },
+          { name: "challenge-rules", type: "text", desc: "Sanctioned ELO stakes, screenshot proof, and duel rules." },
+          { name: "challenge", type: "text", desc: "Ranked challenge tickets and wager acceptance." },
+          { name: "challenge-results", type: "text", desc: "Match result submissions and live ELO ledger." }
+        ]
+      },
+      {
+        name: "【◆ Voice ◆】",
+        channels: [
+          { name: "Voice 1", type: "voice", desc: "Open lobby voice lounge." },
+          { name: "Voice 2", type: "voice", desc: "Open lobby voice lounge." },
+          { name: "Voice 3", type: "voice", desc: "Open lobby voice lounge." },
+          { name: "DUO", type: "voice", desc: "Limited squad voice: 00/02." },
+          { name: "TRIO", type: "voice", desc: "Limited squad voice: 00/03." },
+          { name: "SQUAD", type: "voice", desc: "Limited squad voice: 00/04." },
+          { name: "PARTY", type: "voice", desc: "Limited squad voice: 00/05." },
+          { name: "Live", type: "voice", desc: "Spectator stream stage." }
+        ]
+      }
+    ];
+
+    // Static Server Members Roster (Reconstructed with monochrome bracket badges)
+    const STATIC_MEMBERS = {
+      founder: {
+        name: "coasticus",
+        badge: "[LINE]",
+        status: "dnd",
+        desc: "Founder & Lead Architect"
+      },
+      onlineMembers: [
+        {
+          name: "Arcane",
+          isApp: true,
+          statusNote: "arcane.bot 1014/1920",
+          statusColor: "white",
+          avatarInitial: "AR"
+        },
+        {
+          name: "Carl-bot",
+          isApp: true,
+          statusNote: "/help | carl.gg",
+          statusColor: "white",
+          avatarInitial: "CB"
+        },
+        {
+          name: "Dyno",
+          isApp: true,
+          statusNote: "Playing Battles | Use /battle",
+          statusColor: "white",
+          avatarInitial: "DY"
+        },
+        {
+          name: "Sheikh hitlier",
+          badge: "[KURD]",
+          statusNote: "happy day Ronaldo day",
+          statusColor: "white",
+          avatarInitial: "SH"
+        },
+        {
+          name: "7SN",
+          badge: "[HIVE]",
+          statusNote: "sleepy guy -_-",
+          statusColor: "red",
+          avatarInitial: "7S"
+        }
+      ],
+      offlineMembers: [
+        { name: "luke", role: "Enlisted Operative", avatarInitial: "LK" },
+        { name: "NEXUS", isApp: true, role: "System Service Unit", avatarInitial: "NX" },
+        { name: "VOIDBØRN™", badge: "[ETOH]", role: "Vanguard Duelist", avatarInitial: "VB" },
+        { name: "「 y u r i 」", role: "Elite Contender", avatarInitial: "YR" }
+      ]
+    };
+
+    // Competitive Ranked Leaderboard
+    const LEADERBOARD_ENTRIES = [
+      { rank: 1, name: "coasticus", branch: "redliner", elo: 2580, wins: 154, losses: 11, streak: "W14" },
+      { rank: 2, name: "Sheikh hitlier", branch: "jjs", elo: 2470, wins: 142, losses: 19, streak: "W8" },
+      { rank: 3, name: "VOIDBØRN™", branch: "jjs", elo: 2410, wins: 130, losses: 23, streak: "W5" },
+      { rank: 4, name: "7SN", branch: "redliner", elo: 2355, wins: 121, losses: 25, streak: "W3" },
+      { rank: 5, name: "「 y u r i 」", branch: "jjs", elo: 2290, wins: 108, losses: 29, streak: "L1" },
+      { rank: 6, name: "luke", branch: "redliner", elo: 2240, wins: 98, losses: 32, streak: "W4" },
+      { rank: 7, name: "Apex_Drifter", branch: "redliner", elo: 2190, wins: 91, losses: 35, streak: "W2" },
+      { rank: 8, name: "BlackFlash_K", branch: "jjs", elo: 2160, wins: 87, losses: 39, streak: "W1" },
+      { rank: 9, name: "DomainBreaker", branch: "jjs", elo: 2120, wins: 82, losses: 41, streak: "L2" },
+      { rank: 10, name: "Redline_Ace", branch: "redliner", elo: 2090, wins: 79, losses: 44, streak: "W3" }
+    ];
+
+    // Dynamic Fluctuation on Refresh (tight to realistic community size)
+    function generateDynamicCounts() {
+      // 5 to 8 online (coasticus + online members/bots)
+      const dynamicOnline = 5 + Math.floor(Math.random() * 4); 
+      // 10 to 13 total members
+      const dynamicTotal = 10 + Math.floor(Math.random() * 4);
+      
+      document.getElementById('live-online-metric').innerText = dynamicOnline;
+      document.getElementById('live-total-metric').innerText = dynamicTotal;
+      document.getElementById('roster-stat-online').innerText = `${dynamicOnline} Online`;
+      document.getElementById('roster-stat-total').innerText = `${dynamicTotal} Members`;
+      document.getElementById('tier2-label').innerText = `MEMBER — ${Math.max(dynamicOnline - 1, 4)}`;
+      document.getElementById('terminal-session-id').innerText = `#00${Math.floor(10 + Math.random() * 89)}`;
+    }
+
+    // Web Audio Synthesizer (Monochrome audio)
+    let audioMuted = false;
+    let audioContext = null;
+
+    function initWebAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function playKeyClick() {
+      if (audioMuted) return;
+      try {
+        initWebAudio();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(500 + Math.random() * 200, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.012, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.03);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.03);
+      } catch (e) {}
+    }
+
+    function playBeep(success = true) {
+      if (audioMuted) return;
+      try {
+        initWebAudio();
+        if (audioContext.state === 'suspended') audioContext.resume();
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.type = success ? 'triangle' : 'sawtooth';
+        osc.frequency.setValueAtTime(success ? 800 : 220, audioContext.currentTime);
+        gain.gain.setValueAtTime(0.02, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.08);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start();
+        osc.stop(audioContext.currentTime + 0.08);
+      } catch (e) {}
+    }
+
+    // Discord Widget API Connector
+    let isLiveSynced = false;
+    let activeGuildId = null;
+
+    async function syncDiscordWidget(explicitId = null) {
+      const inputEl = document.getElementById('discord-guild-id-input');
+      const targetId = explicitId || (inputEl ? inputEl.value.trim() : '');
+      const feedback = document.getElementById('sync-feedback');
+      const btn = document.getElementById('sync-exec-btn');
+
+      if (!targetId) {
+        if (feedback) feedback.innerHTML = '<span class="text-red-400">[ERROR] Please enter a valid Discord Server ID.</span>';
+        playBeep(false);
+        return;
+      }
+
+      if (btn) {
+        btn.innerText = "QUERYING...";
+        btn.disabled = true;
+      }
+      playKeyClick();
+
+      try {
+        // Discord Widget JSON public API
+        const endpoint = `https://discord.com/api/guilds/${targetId}/widget.json`;
+        const resp = await fetch(endpoint);
+        
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status} - Ensure "Enable Server Widget" is ON in Discord Server Settings.`);
+        }
+
+        const data = await resp.json();
+        
+        // Sync was successful!
+        isLiveSynced = true;
+        activeGuildId = targetId;
+
+        // Apply data
+        applyDiscordWidgetData(data);
+        
+        if (feedback) feedback.innerHTML = `<span class="text-white font-bold">[SYNC OK] Connected to ${escapeMarkup(data.name || 'Guild')}! (${data.presence_count || 0} online)</span>`;
+        document.getElementById('sync-status-indicator').innerText = "[LIVE SYNC]";
+        document.getElementById('sync-status-indicator').className = "text-white font-bold";
+        document.getElementById('footer-sync-state').innerText = "ONLINE (WIDGET)";
+        document.getElementById('roster-source-label').innerText = `Live Discord Widget feed: ${data.name || targetId}`;
+        
+        showToast(`Discord Widget connected! ${data.presence_count || 0} operatives active.`);
+        playBeep(true);
+        setTimeout(closeSyncModal, 1200);
+
+      } catch (err) {
+        playBeep(false);
+        if (feedback) {
+          feedback.innerHTML = `<span class="text-red-400 font-bold">[SYNC FAILED]</span> <span class="text-zinc-400 text-[10px] block mt-1">${escapeMarkup(err.message)}</span>`;
+        }
+        showToast("Widget query failed. Check Server Settings -> Widget.");
+      } finally {
+        if (btn) {
+          btn.innerText = "CONNECT";
+          btn.disabled = false;
+        }
+      }
+    }
+
+    function applyDiscordWidgetData(data) {
+      const presenceCount = data.presence_count || 0;
+      const members = data.members || [];
+
+      document.getElementById('live-online-metric').innerText = presenceCount;
+      document.getElementById('live-total-metric').innerText = Math.max(presenceCount, members.length);
+      document.getElementById('roster-stat-online').innerText = `${presenceCount} Online`;
+
+      if (data.instant_invite) {
+        document.getElementById('invite-link-text').innerText = data.instant_invite;
+      }
+
+      // Render live members from Widget
+      const onlineContainer = document.getElementById('online-members-grid');
+      onlineContainer.innerHTML = '';
+
+      if (members.length === 0) {
+        onlineContainer.innerHTML = `<div class="text-xs text-zinc-500 italic p-3">No members currently broadcasting public presence.</div>`;
+        return;
+      }
+
+      members.slice(0, 15).forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'bg-[#0e0e14] border border-[#1f1f2a] rounded-xl p-3.5 flex items-center space-x-3 hover:border-zinc-700 transition font-mono';
+        
+        const avatarUrl = m.avatar_url || `https://placehold.co/80x80/09090e/ffffff?text=${encodeURIComponent(m.username.substring(0, 2).toUpperCase())}`;
+        const isBot = m.bot || m.username.toLowerCase().includes('bot');
+
+        item.innerHTML = `
+          <div class="relative w-10 h-10 rounded-full bg-black border border-zinc-700 overflow-hidden shrink-0 flex items-center justify-center font-bold text-white text-xs">
+            <img src="${avatarUrl}" alt="${escapeMarkup(m.username)}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/80x80/09090e/ffffff?text=${encodeURIComponent(m.username.substring(0,2))}'">
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 ${m.status === 'dnd' ? 'bg-red-500' : 'bg-white'} border-2 border-black rounded-full"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-bold text-white truncate">${escapeMarkup(m.username)}</span>
+              ${isBot ? '<span class="px-1 py-0.2 rounded bg-zinc-800 text-zinc-300 text-[9px] font-bold border border-zinc-700">[BOT]</span>' : ''}
+              ${m.game ? `<span class="px-1 py-0.2 rounded bg-red-950 text-red-200 text-[9px] border border-red-800 font-mono">[${escapeMarkup(m.game.name || 'PLAYING')}]</span>` : ''}
+            </div>
+            <p class="text-[11px] text-zinc-500 truncate mt-0.5">${m.game ? escapeMarkup(m.game.name) : 'Active in server'}</p>
+          </div>
+        `;
+        onlineContainer.appendChild(item);
+      });
+    }
+
+    function resetToStaticRoster() {
+      isLiveSynced = false;
+      activeGuildId = null;
+      document.getElementById('sync-status-indicator').innerText = "[STATIC]";
+      document.getElementById('sync-status-indicator').className = "text-red-500 font-bold";
+      document.getElementById('footer-sync-state').innerText = "READY";
+      document.getElementById('roster-source-label').innerText = "Direct capture from server member list [STATIC RECONSTRUCTION].";
+      generateDynamicCounts();
+      renderRosterGrids();
+      showToast("Reverted to static server roster.");
+      closeSyncModal();
+    }
+
+    const cliInputBox = document.getElementById('cli-input-box');
+    const cliOutput = document.getElementById('cli-output');
+    const terminalBody = document.getElementById('terminal-body');
+
+    let historyLog = [];
+    let historyCursor = -1;
+
+    const COMMANDS = [
+      'help', 'tree', 'channels', 'branches', 'spar', 
+      'leaderboard', 'top10', 'members', 'roster', 'sync', 
+      'blacklist', 'rules', 'join', 'whoami', 'ping', 'clear', 'cls'
+    ];
+
+    cliInputBox.addEventListener('keydown', (e) => {
+      playKeyClick();
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const cmd = cliInputBox.value.trim();
+        cliInputBox.value = '';
+        if (cmd) {
+          historyLog.push(cmd);
+          historyCursor = historyLog.length;
+          runCommand(cmd);
+        } else {
+          appendCliOutput(`<div><span class="text-red-500 font-bold">coasticus@bash-5.2:~$</span></div>`);
+          scrollCli();
+        }
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        if (historyLog.length > 0 && historyCursor > 0) {
+          historyCursor--;
+          cliInputBox.value = historyLog[historyCursor];
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        if (historyCursor < historyLog.length - 1) {
+          historyCursor++;
+          cliInputBox.value = historyLog[historyCursor];
+        } else {
+          historyCursor = historyLog.length;
+          cliInputBox.value = '';
+        }
+      } else if (e.key === 'Tab') {
+        e.preventDefault();
+        const curr = cliInputBox.value.trim().toLowerCase();
+        if (curr) {
+          const matched = COMMANDS.find(c => c.startsWith(curr));
+          if (matched) cliInputBox.value = matched;
+        }
+      }
+    });
+
+    function execQuick(cmd) {
+      playKeyClick();
+      runCommand(cmd);
+    }
+
+    function scrollCli() {
+      setTimeout(() => {
+        terminalBody.scrollTop = terminalBody.scrollHeight;
+      }, 10);
+    }
+
+    function appendCliOutput(html) {
+      const line = document.createElement('div');
+      line.innerHTML = html;
+      cliOutput.appendChild(line);
+      scrollCli();
+    }
+
+    function runCommand(rawInput) {
+      const parts = rawInput.trim().split(/\s+/);
+      const command = parts[0].toLowerCase();
+      const args = parts.slice(1);
+
+      playBeep(true);
+
+      // Print prompt echo
+      appendCliOutput(`
+        <div class="flex items-center space-x-2 text-sm mt-3 font-semibold font-mono">
+          <span class="text-red-500">coasticus@bash-5.2:~$</span>
+          <span class="text-white">${escapeMarkup(rawInput)}</span>
+        </div>
+      `);
+
+      switch (command) {
+        case 'help':
+          renderCliHelp();
+          break;
+        case 'tree':
+        case 'channels':
+          renderCliTree();
+          break;
+        case 'branches':
+        case 'branch':
+          renderCliBranches();
+          break;
+        case 'spar':
+        case 'challenge':
+          runCliSpar(args.join(' '));
+          break;
+        case 'leaderboard':
+        case 'top10':
+          renderCliLeaderboard();
+          break;
+        case 'members':
+        case 'roster':
+          renderCliRoster();
+          break;
+        case 'sync':
+          if (args[0]) {
+            syncDiscordWidget(args[0]);
+          } else {
+            openSyncModal();
+          }
+          break;
+        case 'blacklist':
+          renderCliBlacklist();
+          break;
+        case 'rules':
+          renderCliRules();
+          break;
+        case 'join':
+          openJoinModal();
+          break;
+        case 'whoami':
+          appendCliOutput(`<div class="text-xs text-zinc-300 font-mono">USER: <span class="text-red-400 font-bold">coasticus [LINE]</span> &bull; CLEARANCE: <span class="text-white font-bold">COMMANDER</span></div>`);
+          break;
+        case 'ping':
+          appendCliOutput(`<div class="text-xs text-zinc-300 font-mono">RTT TO DISCORD-GATEWAY: <span class="text-white font-bold">16ms</span> &bull; PACKET LOSS: <span class="text-red-400 font-bold">0%</span></div>`);
+          break;
+        case 'clear':
+        case 'cls':
+          cliOutput.innerHTML = '';
+          break;
+        default:
+          playBeep(false);
+          appendCliOutput(`
+            <div class="text-xs text-red-400 font-mono">
+              bash: <strong class="text-white">${escapeMarkup(command)}</strong>: command not recognized.
+              <span class="text-zinc-500 block">Type <button onclick="execQuick('help')" class="text-red-400 underline">help</button> to inspect available commands.</span>
+            </div>
+          `);
+      }
+    }
+
+    function renderCliHelp() {
+      appendCliOutput(`
+        <div class="space-y-2 text-xs font-mono">
+          <div class="text-red-400 font-bold tracking-wider">BASH-5.2$ SHELL COMMANDS:</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-zinc-300">
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">tree / channels</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Prints full category layout and Discord channels.</p>
+            </div>
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">branches</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Inspect Redliner and JJS division branches.</p>
+            </div>
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">spar [target]</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Executes combat calculation against member.</p>
+            </div>
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">sync [guild_id]</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Queries Discord Widget API for live online users.</p>
+            </div>
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">members / roster</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Renders founder, online members, and offline units.</p>
+            </div>
+            <div class="bg-black p-2.5 rounded border border-zinc-800">
+              <span class="text-white font-bold">leaderboard</span>
+              <p class="text-zinc-400 text-[11px] mt-0.5">Displays top ELO standings and win ratios.</p>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderCliTree() {
+      let treeStr = `<span class="text-red-500 font-bold">bash-5.2$ /</span>\n`;
+      SERVER_CATEGORIES.forEach((cat, idx) => {
+        const isLastCat = idx === SERVER_CATEGORIES.length - 1;
+        treeStr += `${isLastCat ? "└── " : "├── "}<span class="text-white font-bold">${cat.name}</span>\n`;
+        cat.channels.forEach((ch, cIdx) => {
+          const isLastCh = cIdx === cat.channels.length - 1;
+          const prefix = isLastCat ? "    " : "│   ";
+          const isSpecial = ch.name === 'redliner' || ch.name === 'jjs' ? "text-red-400 font-bold" : "text-zinc-300";
+          treeStr += `${prefix}${isLastCh ? "└── " : "├── "}<span class="text-zinc-600">[${ch.type === 'voice' ? 'VC' : '#'}]</span> <span class="${isSpecial}">${ch.name}</span> <span class="text-zinc-600 text-[10px]">:: ${ch.desc}</span>\n`;
+        });
+      });
+
+      appendCliOutput(`
+        <div class="text-xs space-y-1 font-mono">
+          <div class="text-red-400 font-bold">SERVER CHANNEL TREE (#bash-5.2$)</div>
+          <pre class="bg-black p-3 rounded border border-zinc-800 text-[11px] text-zinc-300 overflow-x-auto whitespace-pre font-mono leading-relaxed">${treeStr}</pre>
+        </div>
+      `);
+    }
+
+    function renderCliBranches() {
+      appendCliOutput(`
+        <div class="text-xs space-y-2 font-mono">
+          <div class="text-red-400 font-bold">[ACTIVE COMBAT BRANCHES]</div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div class="bg-red-950/40 border border-red-600/80 p-3 rounded">
+              <div class="text-white font-bold">[RL] BRANCH: REDLINER (#redliner)</div>
+              <p class="text-zinc-300 text-[11px] mt-1">High-velocity speed duels and evasion. Scrims on Saturdays 19:00 UTC.</p>
+            </div>
+            <div class="bg-black border border-zinc-700 p-3 rounded">
+              <div class="text-white font-bold">[JJS] BRANCH: JJS (#jjs)</div>
+              <p class="text-zinc-300 text-[11px] mt-1">Jujutsu Shenanigans fighting ladder. Frame cancels and Domain duels.</p>
+            </div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderCliLeaderboard() {
+      let rows = '';
+      LEADERBOARD_ENTRIES.slice(0, 5).forEach(e => {
+        rows += `<tr class="border-b border-zinc-800 text-[11px]">
+          <td class="py-1 px-2 font-bold text-white">#${e.rank}</td>
+          <td class="py-1 px-2 text-zinc-200">${e.name}</td>
+          <td class="py-1 px-2 text-red-400 uppercase">[${e.branch}]</td>
+          <td class="py-1 px-2 font-bold text-white">${e.elo}</td>
+          <td class="py-1 px-2 text-zinc-400">${e.wins}W / ${e.losses}L</td>
+        </tr>`;
+      });
+
+      appendCliOutput(`
+        <div class="text-xs space-y-2 font-mono">
+          <div class="text-white font-bold">▲ TOP OPERATIVES (Season 4 Standings)</div>
+          <div class="border border-zinc-800 rounded bg-black overflow-x-auto">
+            <table class="w-full text-left font-mono">
+              <thead><tr class="bg-[#0e0e14] text-zinc-400 text-[10px]"><th class="p-1 px-2">Rank</th><th class="p-1 px-2">Operative</th><th class="p-1 px-2">Branch</th><th class="p-1 px-2">ELO</th><th class="p-1 px-2">Record</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderCliRoster() {
+      appendCliOutput(`
+        <div class="text-xs space-y-2 font-mono">
+          <div class="text-white font-bold">◆ DISCORD OPERATIVES RECONSTRUCTION:</div>
+          <div class="bg-black border border-zinc-800 p-3 rounded space-y-2 text-[11px]">
+            <div><strong class="text-red-400">FOUNDER:</strong> coasticus <span class="bg-red-950 text-white px-1 rounded text-[10px] border border-red-700">[LINE]</span></div>
+            <div><strong class="text-zinc-200">ONLINE:</strong> Sheikh hitlier [KURD], 7SN [HIVE], Arcane [BOT], Carl-bot [BOT], Dyno [BOT]</div>
+            <div><strong class="text-zinc-500">OFFLINE:</strong> luke, NEXUS [BOT], VOIDBØRN™ [ETOH], 「 y u r i 」</div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderCliBlacklist() {
+      appendCliOutput(`
+        <div class="text-xs space-y-2 font-mono">
+          <div class="text-red-400 font-bold">[!] #blacklist INFRACTION LEDGER:</div>
+          <div class="bg-black border border-zinc-800 p-2.5 rounded text-[11px] text-zinc-300 space-y-1">
+            <div>&bull; <strong class="text-white">UID-8941 (GriefGod)</strong>: Disqualified for illegal macroing in Ranked JJS. [STATUS: PERMANENT]</div>
+            <div>&bull; <strong class="text-white">UID-7721 (NitroGhost)</strong>: Faking score proof in #challenge-results. [STATUS: APPEALABLE]</div>
+          </div>
+        </div>
+      `);
+    }
+
+    function renderCliRules() {
+      appendCliOutput(`
+        <div class="text-xs space-y-1 bg-black border border-zinc-800 p-3 rounded font-mono">
+          <div class="text-white font-bold">[CODE OF ENGAGEMENT]:</div>
+          <p class="text-zinc-400 text-[11px]">1. All matches with ELO wagers must be initiated in #challenge or #spar-request.</p>
+          <p class="text-zinc-400 text-[11px]">2. Best-of-3 format is mandatory for any match exceeding 40 ELO.</p>
+          <p class="text-zinc-400 text-[11px]">3. Submit screenshots to #challenge-results within 15 minutes.</p>
+        </div>
+      `);
+    }
+
+    function runCliSpar(target) {
+      const opp = target && target.trim().length > 0 ? target.trim() : "Sheikh hitlier [KURD]";
+      const win = Math.random() > 0.45;
+      const eloDelta = win ? Math.floor(Math.random() * 16) + 14 : -(Math.floor(Math.random() * 12) + 8);
+
+      appendCliOutput(`
+        <div class="text-xs bg-black border border-red-500/40 p-3 rounded space-y-1.5 font-mono">
+          <div class="text-red-400 font-bold">[COMBAT SPAR]: coasticus vs ${escapeMarkup(opp)}</div>
+          <div class="text-zinc-300 text-[11px]">Sanctioned Ground: <strong class="text-white">#nexus-battle-arena</strong></div>
+          <div class="text-[11px]">${win ? '<span class="text-white font-bold">[VICTORY] Clean knockout executed.</span>' : '<span class="text-red-400 font-bold">[DEFEATED] Opponent broke stance.</span>'}</div>
+          <div class="text-zinc-400 text-[11px]">Rating Change: <span class="${win ? 'text-white font-bold' : 'text-red-400 font-bold'}">${eloDelta > 0 ? '+' + eloDelta : eloDelta} ELO</span></div>
+        </div>
+      `);
+    }
+
+    function renderChannelGrid() {
+      const container = document.getElementById('channel-categories-grid');
+      container.innerHTML = '';
+
+      SERVER_CATEGORIES.forEach(cat => {
+        const card = document.createElement('div');
+        card.className = 'bg-[#0e0e14] border border-[#1f1f2a] rounded-xl p-4 flex flex-col justify-between font-mono';
+
+        let listHtml = '';
+        cat.channels.forEach(ch => {
+          const icon = ch.type === 'voice' ? '[VC]' : '#';
+          const isBranch = ch.name === 'redliner' || ch.name === 'jjs';
+          listHtml += `
+            <div class="flex items-start gap-2 py-1 border-b border-zinc-800/40 last:border-none">
+              <span class="text-zinc-500 text-xs font-mono">${icon}</span>
+              <div class="flex-1 min-w-0">
+                <span class="text-xs font-semibold ${isBranch ? 'text-red-400' : 'text-white'} font-mono">${ch.name}</span>
+                <p class="text-[10px] text-zinc-500 truncate">${ch.desc}</p>
+              </div>
+            </div>
+          `;
+        });
+
+        card.innerHTML = `
+          <div>
+            <div class="text-xs font-bold text-white uppercase tracking-wider mb-2 font-mono flex items-center justify-between">
+              <span>${cat.name}</span>
+              <span class="text-[10px] text-red-500 font-mono">[${cat.channels.length}]</span>
+            </div>
+            <div class="space-y-1">
+              ${listHtml}
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderRosterGrids() {
+      const onlineContainer = document.getElementById('online-members-grid');
+      const offlineContainer = document.getElementById('offline-members-grid');
+
+      onlineContainer.innerHTML = '';
+      offlineContainer.innerHTML = '';
+
+      STATIC_MEMBERS.onlineMembers.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'bg-[#0e0e14] border border-[#1f1f2a] rounded-xl p-3.5 flex items-center space-x-3 hover:border-zinc-700 transition font-mono';
+        
+        item.innerHTML = `
+          <div class="relative w-10 h-10 rounded-full bg-black border border-zinc-700 flex items-center justify-center font-bold text-white text-xs shrink-0">
+            <span>${m.avatarInitial}</span>
+            <span class="absolute bottom-0 right-0 w-2.5 h-2.5 ${m.statusColor === 'red' ? 'bg-red-500' : 'bg-white'} border-2 border-black rounded-full"></span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-bold text-white truncate font-mono">${m.name}</span>
+              ${m.isApp ? '<span class="px-1 py-0.2 rounded bg-zinc-800 text-zinc-300 text-[9px] font-bold border border-zinc-700 font-mono">[BOT]</span>' : ''}
+              ${m.badge ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-black text-white border border-zinc-700 font-mono">${m.badge}</span>` : ''}
+            </div>
+            <p class="text-[11px] text-zinc-500 truncate mt-0.5">${m.statusNote}</p>
+          </div>
+        `;
+        onlineContainer.appendChild(item);
+      });
+
+      STATIC_MEMBERS.offlineMembers.forEach(m => {
+        const item = document.createElement('div');
+        item.className = 'bg-[#0e0e14]/50 border border-zinc-800/80 rounded-xl p-3.5 flex items-center space-x-3 font-mono';
+        
+        item.innerHTML = `
+          <div class="w-10 h-10 rounded-full bg-black border border-zinc-800 flex items-center justify-center font-bold text-zinc-500 text-xs shrink-0">
+            <span>${m.avatarInitial}</span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <span class="text-xs font-semibold text-zinc-400 truncate font-mono">${m.name}</span>
+              ${m.isApp ? '<span class="px-1 py-0.2 rounded bg-zinc-800 text-zinc-400 text-[9px] font-mono">[BOT]</span>' : ''}
+              ${m.badge ? `<span class="px-1.5 py-0.2 rounded text-[9px] bg-black text-zinc-300 border border-zinc-800 font-mono">${m.badge}</span>` : ''}
+            </div>
+            <p class="text-[10px] text-zinc-600 truncate mt-0.5">${m.role}</p>
+          </div>
+        `;
+        offlineContainer.appendChild(item);
+      });
+    }
+
+    function renderLeaderboardTable(filter = 'all') {
+      const tbody = document.getElementById('leaderboard-table-body');
+      tbody.innerHTML = '';
+
+      let list = LEADERBOARD_ENTRIES;
+      if (filter !== 'all') {
+        list = LEADERBOARD_ENTRIES.filter(e => e.branch === filter);
+      }
+
+      list.forEach(player => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-[#1f1f2a] hover:bg-zinc-900/40 transition font-mono';
+        const rankColor = player.rank === 1 ? 'text-red-500 font-bold' : player.rank <= 3 ? 'text-white font-bold' : 'text-zinc-400';
+        const branchBadge = player.branch === 'redliner' 
+          ? '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-red-950 text-red-200 border border-red-700">[REDLINER]</span>'
+          : '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-black text-white border border-zinc-700">[JJS]</span>';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 ${rankColor}">#${player.rank}</td>
+          <td class="py-2.5 px-3 font-semibold text-white">${player.name}</td>
+          <td class="py-2.5 px-3">${branchBadge}</td>
+          <td class="py-2.5 px-3 text-white font-bold">${player.elo}</td>
+          <td class="py-2.5 px-3 text-zinc-400">${player.wins}W / ${player.losses}L</td>
+          <td class="py-2.5 px-3 ${player.streak.startsWith('W') ? 'text-white font-bold' : 'text-red-400'}">${player.streak}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function filterLb(type) {
+      ['all', 'redliner', 'jjs'].forEach(t => {
+        const btn = document.getElementById(`lb-filter-${t}`);
+        if (t === type) {
+          btn.className = 'px-3 py-1 rounded bg-[#ff2442] text-white font-bold';
+        } else {
+          btn.className = 'px-3 py-1 rounded bg-black text-zinc-400 hover:text-white border border-zinc-800';
+        }
+      });
+      renderLeaderboardTable(type);
+    }
+
+    function executeArenaSimulation() {
+      const p1 = document.getElementById('sim-player-name').value || "Guest Operative";
+      const p2 = document.getElementById('sim-target-select').value;
+      const branch = document.getElementById('sim-discipline').value;
+      const logFeed = document.getElementById('arena-log-feed');
+      const statusInd = document.getElementById('arena-status-indicator');
+
+      statusInd.innerText = "[SIMULATING...]";
+      statusInd.className = "text-white font-bold animate-pulse";
+      playBeep(true);
+
+      logFeed.innerHTML = `
+        <div class="text-zinc-400">[INIT] Generating duel roll in <strong>#nexus-battle-arena</strong>...</div>
+        <div class="text-zinc-400">[CONFIG] Discipline loaded: <span class="text-red-400 uppercase font-bold">[${branch}]</span></div>
+      `;
+
+      setTimeout(() => {
+        const moves = [
+          "High-speed sprint entry initiated with blindside angle",
+          "Rapid frame cancel bait deployed against target",
+          "Domain clash resolved at critical frame advantage",
+          "Black Flash connection registered in neutral exchange"
+        ];
+        const move = moves[Math.floor(Math.random() * moves.length)];
+        const won = Math.random() > 0.42;
+        const elo = won ? Math.floor(Math.random() * 15) + 15 : -(Math.floor(Math.random() * 12) + 8);
+
+        logFeed.innerHTML += `
+          <div class="text-zinc-300">&bull; ${move}.</div>
+          <div class="mt-2 pt-2 border-t border-zinc-800">
+            ${won 
+              ? `<span class="text-white font-bold">[VICTORY] ${escapeMarkup(p1)} claims duel over ${escapeMarkup(p2)}!</span>` 
+              : `<span class="text-red-400 font-bold">[DEFEATED] ${escapeMarkup(p2)} breaks defense of ${escapeMarkup(p1)}.</span>`}
+          </div>
+          <div class="text-xs mt-1">Stakes Recorded: <strong class="${won ? 'text-white' : 'text-red-400'}">${elo > 0 ? '+' + elo : elo} ELO</strong> logged to <span class="text-zinc-400">#challenge-results</span>.</div>
+        `;
+        statusInd.innerText = "[COMPLETED]";
+        statusInd.className = "text-red-400 font-bold";
+        showToast("Spar result calculated and logged.");
+      }, 650);
+    }
+
+    function switchTab(tabName) {
+      playKeyClick();
+
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = 'tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 text-zinc-400 hover:text-white hover:bg-zinc-900';
+      });
+      const activeBtn = document.getElementById(`tab-btn-${tabName}`);
+      if (activeBtn) {
+        activeBtn.className = 'tab-btn px-3.5 py-2 rounded-lg font-semibold transition flex items-center gap-1.5 bg-[#ff2442] text-white';
+      }
+
+      document.querySelectorAll('.panel').forEach(panel => {
+        panel.classList.add('hidden');
+      });
+
+      const targetPanel = document.getElementById(`panel-${tabName}`);
+      if (targetPanel) {
+        targetPanel.classList.remove('hidden');
+      }
+
+      if (tabName === 'terminal') {
+        setTimeout(() => cliInputBox.focus(), 50);
+      }
+    }
+
+    function openSyncModal() {
+      playKeyClick();
+      document.getElementById('sync-modal').classList.remove('hidden');
+    }
+
+    function closeSyncModal() {
+      document.getElementById('sync-modal').classList.add('hidden');
+    }
+
+    function openJoinModal() {
+      playKeyClick();
+      document.getElementById('join-modal').classList.remove('hidden');
+    }
+
+    function closeJoinModal() {
+      document.getElementById('join-modal').classList.add('hidden');
+    }
+
+    function copyDiscordLink() {
+      const input = document.createElement('input');
+      input.value = document.getElementById('invite-link-text').innerText;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+      showToast("Discord invite copied to clipboard!");
+    }
+
+    function initiateBranchApply(branchName) {
+      openApplyModal(branchName);
+    }
+
+    function openApplyModal(branch) {
+      document.getElementById('apply-branch-target').value = branch;
+      document.getElementById('apply-modal-header').innerText = `Application &bull; ${branch}`;
+      document.getElementById('apply-modal').classList.remove('hidden');
+    }
+
+    function closeApplyModal() {
+      document.getElementById('apply-modal').classList.add('hidden');
+    }
+
+    function handleApplySubmit(e) {
+      e.preventDefault();
+      const user = document.getElementById('apply-user').value;
+      const branch = document.getElementById('apply-branch-target').value;
+      closeApplyModal();
+
+      showToast(`Application queued in #applications for ${user}!`);
+      appendCliOutput(`
+        <div class="text-xs bg-black border border-red-500/50 p-2.5 rounded text-zinc-200 font-mono">
+          [REGISTRATION] Application logged for <strong class="text-white">${escapeMarkup(user)}</strong> into <strong class="text-red-400">${escapeMarkup(branch)}</strong>.
+        </div>
+      `);
+      scrollCli();
+    }
+
+    function showToast(msg) {
+      const shelf = document.getElementById('toast-shelf');
+      const toast = document.createElement('div');
+      toast.className = 'bg-black border border-red-500 text-white text-xs px-4 py-2.5 rounded-lg shadow-2xl font-mono flex items-center gap-2 transform transition-all duration-300';
+      toast.innerHTML = `<span class="text-red-500 font-bold">[OK]</span> <span>${escapeMarkup(msg)}</span>`;
+      shelf.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function escapeMarkup(str) {
+      if (!str) return '';
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Audio & CRT Toggles
+    document.getElementById('audio-toggle-btn').addEventListener('click', () => {
+      audioMuted = !audioMuted;
+      document.getElementById('audio-text').innerText = audioMuted ? "MUTED" : "ON";
+      showToast(`Terminal Web Audio: ${audioMuted ? "MUTED" : "ENABLED"}`);
+    });
+
+    document.getElementById('crt-toggle-btn').addEventListener('click', () => {
+      const scan = document.getElementById('scanline-layer');
+      scan.classList.toggle('opacity-0');
+      const isOff = scan.classList.contains('opacity-0');
+      showToast(`CRT Scanline Grid: ${isOff ? "OFF" : "ON"}`);
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeJoinModal();
+        closeApplyModal();
+        closeSyncModal();
+      }
+    });
+
+    terminalBody.addEventListener('click', (e) => {
+      if (window.getSelection().toString().length === 0) {
+        cliInputBox.focus();
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      generateDynamicCounts();
+      renderChannelGrid();
+      renderRosterGrids();
+      renderLeaderboardTable('all');
+    });
+  </script>
+</body>
+</html>
